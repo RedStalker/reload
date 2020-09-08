@@ -112,7 +112,7 @@ func Do(log func(string, ...interface{}), additional ...dir) error {
 				// platforms. See https://github.com/fsnotify/fsnotify/issues/74
 				var trigger bool
 				switch runtime.GOOS {
-				case "darwin", "freebsd", "openbsd", "netbsd", "dragonfly":
+				case "darwin", "freebsd", "openbsd", "netbsd", "dragonfly", "windows":
 					trigger = event.Op&fsnotify.Create == fsnotify.Create
 				case "linux":
 					trigger = event.Op&fsnotify.Write == fsnotify.Write
@@ -174,7 +174,18 @@ func Exec() {
 	if closeWatcher != nil {
 		closeWatcher()
 	}
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command(os.Args[0], "0")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Env = os.Environ()
 
+		err := cmd.Start()
+		if err == nil {
+			os.Exit(0)
+		}
+	}
 	err := syscall.Exec(execName, append([]string{execName}, os.Args[1:]...), os.Environ())
 	if err != nil {
 		panic(fmt.Sprintf("cannot restart: %v", err))
